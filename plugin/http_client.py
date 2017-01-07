@@ -1,6 +1,8 @@
 import json
 import re
 import requests
+import shlex
+import argparse
 
 from_cmdline = False
 try:
@@ -150,6 +152,101 @@ def open_scratch_buffer(contents, filetype):
     if vim.eval('g:http_client_focus_output_window') != '1':
         vim.current.window = previous_window
 
+def create_curl_from_buffer():
+    win = vim.current.window
+    buf = win.buffer
+    line_num = win.cursor[0] - 1
+    block = find_block(buf, line_num)
+
+    variables = dict((m.groups() for m in (GLOBAL_VAR_REGEX.match(l) for l in buf) if m))
+    variables.update(dict((m.groups() for m in (VAR_REGEX.match(l) for l in block) if m)))
+
+    block = [line for line in block if not is_comment(line) and line.strip() != '']
+
+    if len(block) == 0:
+        print('Request was empty.')
+        return
+
+    method_url = block.pop(0)
+    method_url_match = METHOD_REGEX.match(method_url)
+    if not method_url_match:
+        print('Could not find method or URL!')
+        return
+
+    method, url = method_url_match.groups()
+    url = replace_vars(url, variables)
+
+    headers = {}
+    while len(block) > 0:
+        header_match = HEADER_REGEX.match(block[0])
+        if header_match:
+            block.pop(0)
+            header_name, header_value = header_match.groups()
+            headers[header_name] = replace_vars(header_value, variables)
+        else:
+            break
+
+    data = [ replace_vars(l, variables).strip() for l in block ]
+    data = ' '.join(data).replace('"', '\\"')
+
+    # double escaped so it can work in vim
+    curl = "curl -X " + method
+    for key in headers:
+        curl += ' -H \\"' + key + ": " + headers[key] + '\\"'
+
+    curl += ' -v -d \\"' + data.replace('"', '\\\\"') + '\\" ' + url
+
+    vim.command(':let curlCommand = "' + curl + '"')
+
+def curl_parser():
+    parser = argparse.ArgumentParser(prog='curl')
+    parser.add_argument('-H', action='append')
+    parser.add_argument('-v', action='store_true')
+    parser.add_argument('-d')
+    parser.add_argument('-X')
+    parser.add_argument('url')
+    return parser
+
+def create_template_from_curl():
+    win = vim.current.window
+    buf = win.buffer
+    line_num = win.cursor[0] - 1
+    block = find_block(buf, line_num)
+    block = [line for line in block if not is_comment(line) and line.strip() != '']
+    block = ''.join(block)
+
+    parser = curl_parser()
+    commands = shlex.split(block)
+
+    if commands[0] == 'curl':
+        commands.pop(0)
+
+    result = parser.parse_args(commands)
+
+    vim.command('normal G')
+    vim.command('normal o')
+    vim.command('normal I' + result.X + ' ' + result.url)
+    for header in result.H:
+        vim.command('normal o')
+        vim.command('normal I' + header)
+    if (is_json(result.d)):
+        body = json.loads(result.d)
+        body = json.dumps(body, sort_keys=True, indent=4, separators=(',', ': '))
+        body = body.split('\n')
+        for line in body:
+            vim.command('normal o')
+            vim.command('normal I' + line)
+    else:
+        vim.command('normal o')
+        vim.command('normal I' + results.d)
+
+
+def is_json(myjson):
+  try:
+    json_object = json.loads(myjson)
+  except ValueError, e:
+    return False
+  return True
 
 def do_request_from_buffer():
     win = vim.current.window

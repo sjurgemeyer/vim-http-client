@@ -49,8 +49,50 @@ function! s:DoHTTPRequest()
   Python do_request_from_buffer()
 endfunction
 
+function! ToCurl()
+  if has('python')
+    command! -nargs=1 Python python <args>
+    command! -nargs=1 Pyfile pyfile <args>
+  elseif has('python3')
+    command! -nargs=1 Python python3 <args>
+    command! -nargs=1 Pyfile py3file <args>
+  else
+    echo 'Error: this plugin requires vim compiled with python support.'
+    finish
+  endif
+  if !s:initialized_client
+    let s:initialized_client = 1
+    execute 'Pyfile ' . s:script_path . '/http_client.py'
+  endif
+  Python create_curl_from_buffer()
+  echom curlCommand
+  execute " let @* = curlCommand"
+endfunction
+
 command! -nargs=0 HTTPClientDoRequest call <SID>DoHTTPRequest()
 
 if g:http_client_bind_hotkey
   silent! nnoremap <unique> <Leader>tt :HTTPClientDoRequest<cr>
 endif
+
+function FromCurl()
+  if has('python')
+    command! -nargs=1 Python python <args>
+    command! -nargs=1 Pyfile pyfile <args>
+  elseif has('python3')
+    command! -nargs=1 Python python3 <args>
+    command! -nargs=1 Pyfile py3file <args>
+  else
+    echo 'Error: this plugin requires vim compiled with python support.'
+    finish
+  endif
+  if !s:initialized_client
+    let s:initialized_client = 1
+    execute 'Pyfile ' . s:script_path . '/http_client.py'
+  endif
+  Python create_template_from_curl()
+
+endfunction
+
+command! ToCurl :call ToCurl()
+command! FromCurl :call FromCurl()
