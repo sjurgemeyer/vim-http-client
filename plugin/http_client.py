@@ -255,7 +255,7 @@ def do_request_from_buffer():
     result = do_request(block, win.buffer)
     if result:
         response, content_type = result
-        vim_ft = vim_filetypes_by_content_type().get(content_type, 'text')
+        vim_ft = vim_filetypes_by_content_type().get(content_type, 'http')
         open_scratch_buffer(response, vim_ft)
 
 
