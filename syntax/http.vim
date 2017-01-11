@@ -4,13 +4,16 @@
 " of files containing http requests
 
 syn keyword httpMethods GET PUT POST DELETE
-syn match headers /\c\v(Content\-Type)|(Authorization)|(transfer\-encoding)|(status code)|(connection)|(content-encoding)/
+syn match headers /\c\v(Content\-Type)|(Authorization)|(transfer\-encoding)|(status code)|(connection)|(content-encoding)/ nextgroup=headerSeperator
+syn match headerSeperator /: / contained nextgroup=headerValue
+syn match headerValue /.*$/ contained contains=variable
 syn match variable '\$[a-zA-Z0-9]\+'
 syn match variableInString /\$[a-zA-Z_][a-zA-Z0-9_.]*/ contained
 syn match comments "#.*$" contains=variableInString
 syn match responseComments "^\/\/.*$" contains=headers
 hi def link httpMethods Type
 hi def link headers Statement
+hi def link headerValue Type
 hi def link variable Constant
 hi def link variableInString Constant
 
