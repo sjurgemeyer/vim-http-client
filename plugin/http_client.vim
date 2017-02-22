@@ -75,7 +75,7 @@ if g:http_client_bind_hotkey
   silent! nnoremap <unique> <Leader>tt :HTTPClientDoRequest<cr>
 endif
 
-function FromCurl()
+function! FromCurl()
   if has('python')
     command! -nargs=1 Python python <args>
     command! -nargs=1 Pyfile pyfile <args>
